@@ -1,0 +1,428 @@
+Due date is Wednesday, February 17, 2021, 23:59 PST
+
+ONLY write into the existing cells, and do NOT add any cells.
+
+ELEC 400M / EECE 571M Assignment 1: Linear models for classification
+(This assignment is a modified version of an assignment used in ECE 421 at the University of Toronto and kindly made available to us by the instructor.)
+
+In this assignment, you will be using linear models discussed in the lectures to perform a binary classification task. You will compare the performances of linear classification and logistic regression using suitable training algorithms. The implementation will be done in python using functions from the NumPy library. Please use NumPy arrays as data structures.
+
+Data Set
+We consider the dataset of images of letters contained in file notMNIST.npz. In particular, you will use a smaller dataset that only contains the images from two letter classes: “C” (the positive class) and “J” (the negative class). The images are of size 28 × 28 pixels. The figure below shows 20 randomly selected image samples for the letters “C” and “J”.
+
+
+
+You will apply the function loadData to generate the subset of images containing only letters “C” and “J”. This script organizes the total set of 3,745 images into smaller subsets containing 3,500 training images, 100 validation images and 145 test images. Their use will be further specified in the problem descriptions below.
+
+Execute the two helper scripts provided below.
+
+%reset
+%matplotlib inline
+import matplotlib.pyplot as plt
+import numpy as np
+def loadData():
+    with np.load('notMNIST.npz') as data:
+        Data, Target = data['images'], data['labels']
+        posClass = 2
+        negClass = 9
+        dataIndx = (Target==posClass) + (Target==negClass)
+        Data = Data[dataIndx]/255.0
+        Target = Target[dataIndx].reshape(-1, 1)
+        Target[Target==posClass] = 1
+        Target[Target==negClass] = 0
+        np.random.seed(1)
+        randIndx = np.arange(len(Data))
+        np.random.shuffle(randIndx)
+        Data, Target = Data[randIndx], Target[randIndx]
+        trainData, trainTarget = Data[:3500], Target[:3500]
+        validData, validTarget = Data[3500:3600], Target[3500:3600]
+        testData, testTarget = Data[3600:], Target[3600:]
+           
+    return trainData, validData, testData, trainTarget, validTarget, testTarget
+Linear Classification
+The first classifier is the linear classifier
+𝑦̂ =sign(∑𝑖=0𝑑𝑤𝑖𝑥𝑖)
+where 𝑥0=1 so that 𝑏=𝑤0𝑥0 is the bias term and 𝑥1,…,𝑥𝑑 are the input features. The loss function for an input-output pair (𝑥⎯⎯𝑛,𝑦𝑛) and given model parameters 𝑤⎯⎯⎯ is
+𝐿𝑛(𝑤⎯⎯⎯)=1{𝑦̂ 𝑛≠𝑦𝑛}.
+The total loss for 𝑁 samples is
+𝐿(𝑤⎯⎯⎯)=1𝑁∑𝑛=1𝑁1{𝑦̂ 𝑛≠𝑦𝑛}.
+Notes on classification
+The classification should be based on the 𝑑=28×28=784 intensity values in an image. This means that you need to flatten the 2D images to 1D input vectors 𝑥⎯⎯ of length 784.
+The outputs 𝑦̂  of the perceptron model are from {−1,+1}, while the target variable from the data set is from {0,1}. You need to make adjustements to account for this difference, which can include adjusting the data type.
+Loss Function [2 points]
+Implement a function to compute the classification loss as defined above. The function has three input arguments: the weight vector, the feature vectors, and the labels. The binary labels are assumed to be from {−1,+1}. It returns the total loss (normalized with 𝑁, as above) associated with the input.
+
+Student's answer(Top)
+def ErrorRate (w, x, y):
+    # how many label
+    y_hat =np.array([[-1] if i < 0 else [1] for i in x @ w])
+    loss = 1 - np.sum(y_hat == y)/len(y)
+    return loss
+Grade cell: correct-ErrorRateScore: 2.0 / 2.0 (Top)
+"""Check that ErrorRate returns the correct output for several inputs"""
+"""(You may have to adjust the array format for inputs and output that your function expects and delivers, respectively.) )"""
+wtest1 = np.array([[1],[1],[1]])
+xtest1 = np.array([[1,2,3],[2,3,4],[4,5,6],[-1,-2,-3]])
+ytest1 = np.array([[1],[-1],[1],[-1]])
+assert np.abs(ErrorRate(wtest1,xtest1,ytest1)-0.25)<0.01 
+wtest2 = np.array([[-0.3],[0.4],[-3.0]])
+xtest2 = np.array([[0.1,-2.0,3.1],[9.3,-1.3,-0.4],[3.4,4.5,-1.6],[0.2,-2.4,-3.1]])
+ytest2 = np.array([[-1],[-1],[1],[1]])
+assert np.abs(ErrorRate(wtest2,xtest2,ytest2)-0.0)<0.01 
+wtest3 = np.array([[1.2],[-0.4],[3.0]])
+xtest3 = np.array([[0.1,-2.0,3.1],[9.3,-1.3,-0.4],[3.4,4.5,-1.6],[0.2,-2.4,-3.1],[8.1,-2.0,-1.0]])
+ytest3 = np.array([[1],[-1],[1],[1],[1]])
+assert np.abs(ErrorRate(wtest3,xtest3,ytest3)-0.6)<0.01 
+### BEGIN HIDDEN TESTS
+assert np.abs(ErrorRate(np.array([[-1],[-1],[1]]),xtest1,ytest1)-0.75)<0.01 
+assert np.abs(ErrorRate(wtest3,xtest1,ytest2)-0.75)<0.01 
+assert np.abs(ErrorRate(wtest2,xtest2,ytest1)-0.50)<0.01 
+assert np.abs(ErrorRate(np.array([[-1],[0.5],[2]]),xtest2,np.array([[1],[-1],[-1],[-1]]))-0.0)<0.01 
+assert np.abs(ErrorRate(np.array([[-0.1],[0.1],[0.01]]),xtest2,np.array([[-1],[-1],[1],[-1]]))-0.0)<0.01 
+assert np.abs(ErrorRate(wtest3,xtest3,np.array([[1],[1],[-1],[-1],[1]]))-0.0)<0.01 
+assert np.abs(ErrorRate(np.array([[1],[1],[1]]),xtest3,ytest3)-0.4)<0.01 
+### END HIDDEN TESTS
+---------------------------------------------------------------------------
+AssertionError                            Traceback (most recent call last)
+<ipython-input-4-e4cc0551c8fe> in <module>
+     14 assert np.abs(ErrorRate(wtest3,xtest3,ytest3)-0.6)<0.01
+     15 ### BEGIN HIDDEN TESTS
+---> 16 assert np.abs(ErrorRate(np.array([[-1],[-1],[1]]),xtest1,ytest1)-0.75)<0.01
+     17 assert np.abs(ErrorRate(wtest3,xtest1,ytest2)-0.75)<0.01
+     18 assert np.abs(ErrorRate(wtest2,xtest2,ytest1)-0.50)<0.01
+
+AssertionError: 
+Perceptron Learning Algorithm [10 points]
+Implement a function for the perceptron learning algorithm (PLA) which accepts four arguments: an inital weight vector, the data, the labels (binary {−1,+1}), and the maximal number of iterations it executes. It is thus a version of the PLA that is assured to terminate. The function returns the updated weight vector.
+
+Note: To pass the test cases, your PLA needs to select the misclassified sample to perform a model update in a deterministic manner as follows: from the training data {(𝑥1,𝑦1,),(𝑥2,𝑦2),…,(𝑥𝑁,𝑦𝑁)} select the misclassified sample (𝑥𝑖,𝑦𝑖) with the smallest index 𝑖 for the PLA update.
+
+Student's answer(Top)
+def PLA(w, x, y, maxIter):
+
+    # YOUR CODE HERE
+    w = w.astype(float)
+    for _ in range(maxIter):
+        y_hat =np.sign(np.matmul(x,w))
+        predict_result = (y_hat == y)
+        for i in range(len(predict_result)):
+            if predict_result[i] == False:
+                w = w + y[i]*x[i].reshape(w.shape)              
+                break
+    return w
+Comments:
+The amount of test error is not correct. It should be sth around 0.04. You need to do some preprocessing for the train and test data set. For example, you need to add 1 to X for bias.
+
+Grade cell: correct-PLAScore: 2.5 / 5.0 (Top)
+"""Check that PLA returns the correct output for several inputs"""
+"""(You may have to adjust the array format for inputs and output that your function expects and delivers, respectively.)"""
+wtest1 = np.array([[1],[1],[1]])
+xtest1 = np.array([[1,2,3],[2,3,4],[4,5,6],[-1,-2,-3]])
+ytest1 = np.array([[1],[-1],[1],[-1]])
+wtest2 = np.array([[-0.3],[0.4],[-3.0]])
+xtest2 = np.array([[0.1,-2.0,3.1],[9.3,-1.3,-0.4],[3.4,4.5,-1.6],[0.2,-2.4,-3.1]])
+ytest2 = np.array([[-1],[-1],[1],[1]])
+wtest3 = np.array([[1.2],[-0.4],[3.0]])
+xtest3 = np.array([[0.1,-2.0,3.1],[9.3,-1.3,-0.4],[3.4,4.5,-1.6],[0.2,-2.4,-3.1],[8.1,-2.0,-1.0]])
+ytest3 = np.array([[1],[-1],[1],[1],[1]])
+assert np.linalg.norm(np.subtract(PLA(wtest1,xtest1,ytest1, 100),np.array([[-4],[0],[4]])))<0.01
+assert np.linalg.norm(np.subtract(PLA(wtest1,xtest2,ytest2, 100),np.array([[-4.8],[6.4],[-6.4]])))<0.01
+assert np.linalg.norm(np.subtract(PLA(wtest3,xtest3,np.array([[1],[-1],[-1],[1],[1]]), 100), np.array([[-1.],[-4.2],[-1.3]])))<0.01
+### BEGIN HIDDEN TESTS
+assert np.linalg.norm(np.subtract(PLA(wtest1,xtest1,ytest1, 50),np.array([[-3],[1],[5]])))<0.01
+assert np.linalg.norm(np.subtract(PLA(wtest2,xtest1,ytest2, 50),np.array([[5.7],[2.4],[-5.]])))<0.01
+assert np.linalg.norm(np.subtract(PLA(wtest2,xtest3,np.array([[1],[-1],[-1],[1],[-1]]), 100), np.array([[-9.2],[-4.7],[0.5]])))<0.01
+### END HIDDEN TESTS
+Now test the PLA function on the data set.
+
+Test the PLA function by training the classifier on the training data (trainData, trainTarget) with a maximum of 100 iterations, and measuring the cassification error using the testing data (testData, testTarget). Write the test script into the box below and let it print the classification error.
+
+Student's answerScore: 5.0 / 5.0 (Top)
+# YOUR CODE HERE
+trainData, validData, testData, trainTarget, validTarget, testTarget = loadData()
+trainData = trainData.reshape(-1,784)
+validData = validData.reshape(-1,784)
+testData = testData.reshape(-1,784)
+w = np.ones([784,1])
+w_star = PLA(w,trainData,trainTarget,100)
+print(ErrorRate(w_star,testData,testTarget))
+0.4620689655172414
+Pocket algorithm [8 points]
+Implement a function for the pocket algorithm which accepts three arguments: the data, the labels (binary {−1,+1}), and the number of iterations it executes. It should use the function PLA you developed above. It returns the updated weight vector.
+
+Note: To pass the test cases, initialize the weight vector to the all-zero vector.
+
+Student's answer(Top)
+def pocket(x, y, T):
+    w = np.zeros([x.shape[1], 1])
+    w_best = w
+    loss = 1
+    for _ in range(T):
+        w = PLA(w, x, y, 1)
+        loss_new = ErrorRate(w, x, y)
+        if loss_new < loss:
+            w_best = w
+            loss = loss_new            
+    return w_best
+Grade cell: Pocket-correctScore: 3.0 / 3.0 (Top)
+"""Check that Pocket algorithm returns the correct output for several inputs"""
+"""(You may have to adjust the array format for inputs and output that your function expects and delivers, respectively.)"""
+xtest1 = np.array([[1,2,3],[2,3,4],[4,5,6],[-1,-2,-3]])
+ytest1 = np.array([[1],[-1],[1],[-1]])
+xtest2 = np.array([[0.1,-2.0,3.1],[9.3,-1.3,-0.4],[3.4,4.5,-1.6],[0.2,-2.4,-3.1]])
+ytest2 = np.array([[-1],[-1],[1],[1]])
+xtest3 = np.array([[0.1,-2.0,3.1],[9.3,-1.3,-0.4],[3.4,4.5,-1.6],[0.2,-2.4,-3.1],[8.1,-2.0,-1.0]])
+ytest3 = np.array([[1],[-1],[1],[1],[1]])
+assert np.linalg.norm(np.subtract(pocket(xtest1,ytest1, 10),np.array([[1.], [2.],[3.]])))<0.01
+assert np.linalg.norm(np.subtract(pocket(xtest2,ytest1, 5),np.array([[-9.2],[-0.7],[3.5]])))<0.01
+assert np.linalg.norm(np.subtract(pocket(xtest3,ytest3, 5),np.array([[ 0.1],[-2.],[3.1]])))<0.01
+### BEGIN HIDDEN TESTS
+assert np.linalg.norm(np.subtract(pocket(xtest3,ytest3, 10),np.array([[-2.2],[4.3],[6.5]])))<0.01
+assert np.linalg.norm(np.subtract(pocket(xtest2,ytest1, 10),np.array([[-2.2],[4.3],[6.5]])))<0.01
+assert np.linalg.norm(np.subtract(pocket(xtest2,ytest2, 1),np.array([[-0.1],[2.],[-3.1]])))<0.01
+### END HIDDEN TESTS
+Test the pocket function by training the classifier on the training data (trainData, trainTarget) with 100 iterations, and measuring the cassification error using the testing data (testData, testTarget). Write the test script into the box below and let it print the classiciation error.
+
+Student's answerScore: 3.0 / 3.0 (Top)
+trainData, validData, testData, trainTarget, validTarget, testTarget = loadData()
+trainData = trainData.reshape(-1,784)
+validData = validData.reshape(-1,784)
+testData = testData.reshape(-1,784)
+
+w_p = pocket(trainData,trainTarget,100)
+error = ErrorRate(w_p, testData, testTarget)
+print(error)
+0.4620689655172414
+In the text box below, state the test error results for the PLA and pocket algorithm that you obtained. Briefly discuss if they are as you expected and why or why not.
+
+Student's answerScore: 1.0 / 2.0 (Top)
+I expect that the pocket algorithm have better performance than the PLA model, but the reality is not. The pocket algorithm have the same performance with PLA model. That maybe result from that PLA model achieves best performance in the last training epoch.
+
+Comments:
+The amount of test errors are not correct.
+
+Logistic Regression
+Note: For classification with logistic regression, we consider that the labels 𝑦𝑛∈{0,1} are used. So please write your responses and your functions accordingly.
+
+The second classifier we consider is logistic regression. Logistic regression computes the probability measure
+𝑦̂ =𝜃(𝑤⎯⎯⎯𝑇𝑥⎯⎯)
+for a feature vector 𝑥⎯⎯, where 𝜃(𝑧)=e𝑠/(1+e𝑠) is the logistic function, and 𝑦̂  is interpretated as Pr(𝑦=1). Given 𝑁 data samples 𝑥⎯⎯𝑛 and labels 𝑦𝑛, the error measure for logistic regression is the binary cross-entropy loss
+𝐿(𝑤⎯⎯⎯)=1𝑁∑𝑛=1𝑁[−𝑦𝑛log(𝑦̂ (𝑥⎯⎯𝑛))−(1−𝑦𝑛)log(1−𝑦̂ (𝑥⎯⎯𝑛))].
+For the following, you will consider the regularized loss function
+𝐿𝜆(𝑤⎯⎯⎯)=1𝑁∑𝑛=1𝑁[−𝑦𝑛log(𝑦̂ (𝑥⎯⎯𝑛))−(1−𝑦𝑛)log(1−𝑦̂ (𝑥⎯⎯𝑛))]+𝜆2‖𝑤⎯⎯⎯‖22
+with the regularization parameter 𝜆≥0.
+
+The training of the weight vector 𝑤⎯⎯⎯ will be performed through batch gradient descent.
+
+Loss function [2 points]
+Implement a function to compute the regularized cross-entropy loss as defined above. The function has four input arguments: the weight vector, the feature vectors, the labels (binary {0,1}), and the regularization parameter. It returns the regularized loss.
+
+Student's answer(Top)
+def sigmoid(x):
+    return (1.0/(1+np.exp(-x)))
+
+def crossEntropyLoss(w, x, y, reg):
+    y_hat = sigmoid(x @ w)    
+    loss = (- y * np.log(y_hat) - (1-y)*np.log(1-y_hat)).mean() + reg/2*np.sum(w**2)
+    return loss
+#     raise NotImplementedError()
+Grade cell: CrossEntropyLoss-correctScore: 2.0 / 2.0 (Top)
+"""Check that CrossEntropyLoss returns the correct output for several inputs"""
+"""(You may have to adjust the array format for inputs and output that your function expects and delivers, respectively.)"""
+wtest1 = np.array([[1],[1],[1]])
+xtest1 = np.array([[1,2,3],[2,3,4],[4,5,6],[-1,-2,-3]])
+ytest1 = np.array([[1],[0],[1],[0]])
+wtest2 = np.array([[-0.3],[0.4],[-3.0]])
+xtest2 = np.array([[0.1,-2.0,3.1],[9.3,-1.3,-0.4],[3.4,4.5,-1.6],[0.2,-2.4,-3.1]])
+ytest2 = np.array([[0],[0],[1],[1]])
+wtest3 = np.array([[1.2],[-0.4],[3.0]])
+xtest3 = np.array([[0.1,-2.0,3.1],[9.3,-1.3,-0.4],[3.4,4.5,-1.6],[0.2,-2.4,-3.1],[8.1,-2.0,-1.0]])
+ytest3 = np.array([[1],[0],[1],[1],[1]])
+assert np.abs(crossEntropyLoss(wtest1,xtest1,ytest1,reg=0.0)-2.25)<0.01 
+assert np.abs(crossEntropyLoss(wtest2,xtest2,ytest2,reg=0.1)-0.49)<0.01 
+assert np.abs(crossEntropyLoss(wtest3,xtest3,ytest3,reg=0.1)-4.77)<0.01 
+### BEGIN HIDDEN TESTS
+assert np.abs(crossEntropyLoss(wtest1,xtest1,ytest1,reg=0.1)-2.40)<0.01 
+assert np.abs(crossEntropyLoss(wtest1,xtest2,ytest2,reg=0.5)-4.34)<0.01 
+assert np.abs(crossEntropyLoss(wtest2,xtest3,ytest3,reg=0.5)-4.53)<0.01 
+### END HIDDEN TESTS
+Gradient [4 points]
+In the text box below, provide an analytical expression for the gradient of the regularized cross-entropy loss with respect to the weight vector. Note that the labels 𝑦𝑛∈{0,1}.
+
+Student's answerScore: 2.0 / 2.0 (Top)
+∂𝐿∂𝑤=−1𝑁∑𝑛=1𝑁[(𝑦𝑛−𝜃(𝑤⎯⎯⎯𝑇𝑥⎯⎯))𝑥𝑛]+𝜆𝑤
+Implement a function to compute the gradient. The function has four input arguments: the weight vector, the feature vectors, the labels (binary {0,1}), and see the test cases below for the array format) and the regularization parameter. It returns the gradient.
+
+Student's answer(Top)
+def gradCE(w, x, y, reg):
+    # YOUR CODE HERE
+    y_hat = sigmoid(x @ w)
+    return -np.mean(x * (y - y_hat), 0).reshape(w.shape) + reg * w
+Grade cell: Gradient_code-correctScore: 2.0 / 2.0 (Top)
+"""Check that gradeCE returns the correct output for several inputs"""
+"""(You may have to adjust the array format for inputs and output that your function expects and delivers, respectively.)"""
+wtest1 = np.array([[1],[1],[1]])
+xtest1 = np.array([[1,2,3],[2,3,4],[4,5,6],[-1,-2,-3]])
+ytest1 = np.array([[1],[0],[1],[0]])
+wtest2 = np.array([[-0.3],[0.4],[-3.0]])
+xtest2 = np.array([[0.1,-2.0,3.1],[9.3,-1.3,-0.4],[3.4,4.5,-1.6],[0.2,-2.4,-3.1]])
+ytest2 = np.array([[0],[0],[1],[1]])
+wtest3 = np.array([[1.2],[-0.4],[3.0]])
+xtest3 = np.array([[0.1,-2.0,3.1],[9.3,-1.3,-0.4],[3.4,4.5,-1.6],[0.2,-2.4,-3.1],[8.1,-2.0,-1.0]])
+ytest3 = np.array([[1],[0],[1],[1],[1]])
+assert np.linalg.norm(np.subtract(gradCE(wtest1,xtest1,ytest1,reg=0),np.array([[0.50],[0.75],[1.0]])))<0.01
+assert np.linalg.norm(np.subtract(gradCE(wtest2,xtest2,ytest2,reg=1),np.array([[-0.05],[0.36],[-3.01]])))<0.01
+assert np.linalg.norm(np.subtract(gradCE(wtest3,xtest3,ytest3,reg=1),np.array([[2.39],[-1.01],[3.84]])))<0.01
+### BEGIN HIDDEN TESTS
+assert np.linalg.norm(np.subtract(gradCE(wtest1,xtest2,ytest1,reg=1),np.array([[3.32],[0.79],[0.72]])))<0.01
+assert np.linalg.norm(np.subtract(gradCE(wtest2,xtest1,ytest1,reg=2),np.array([[-2.10],[-1.45],[-9.00]])))<0.01
+assert np.linalg.norm(np.subtract(gradCE(wtest2,xtest3,ytest3,reg=1),np.array([[-1.02],[0.99],[-3.52]])))<0.01
+### END HIDDEN TESTS
+Gradient Descent Implementation [3 points]
+Using the gradient and cross-entropy loss function above, implement the batch gradient descent algorithm. The function should accept seven arguments: the weight vector, the feature vectors, the labels (binary {0,1}), the learning rate, the number of epochs, the regularization parameter, and an error tolerance (set to 10−7 for the experiments). The error tolerance will be used to terminate the gradient descent early, if the difference (i.e., its 2-norm) between the old and updated weights after one iteration is below the error tolerance. The function should return the optimized weight vector and the training loss.
+
+Student's answerScore: 3.0 / 3.0 (Top)
+def grad_descent(w, x, y, eta, iterations, reg, error_tol):
+
+    w_grad = np.ones(w.shape)
+    
+    loss_list = []
+    for _ in range(iterations):
+        w_grad = gradCE(w, x, y, reg)
+        w = w + eta*w_grad
+        while np.linalg.norm(w_grad, ord = 2) < 1e-7:
+            loss_list.append(crossEntropyLoss(w, x, y, reg))
+            return w_grad, loss
+        loss_list.append(crossEntropyLoss(w, x, y, reg))
+    
+    return w, loss_list
+#     raise NotImplementedError()
+Tuning the Learning Rate [4 Points]:
+Write a script that excutes logistic regression using the gradient descent function from above to classify the two classes in the notMNIST dataset, loaded with the loadData function.
+
+Set the number of epochs to 2,000 and use the regularization parameter 𝜆=0.
+
+For the learning rate, consider 𝜂=5⋅10−3,10−3,10−4.
+
+Train the classifier on the training data (trainData, trainTarget).
+
+The script should plot the training loss as a function of the number of training epochs.
+
+Student's answerScore: 3.0 / 3.0 (Top)
+trainData, validData, testData, trainTarget, validTarget, testTarget = loadData()
+trainData = trainData.reshape(-1,784)
+validData = validData.reshape(-1,784)
+testData = testData.reshape(-1,784)
+learning_rate = [5e-3, 1e-3, 1e-4]
+epochs = 2000
+loss_info = []
+for eta in learning_rate:
+    w = np.zeros([784,1])
+    w, loss = grad_descent(w, trainData,trainTarget, eta, epochs, 0, 1e-7)
+    loss_info.append({'learning_rate':eta, 'loss_list': loss})
+
+for loss in loss_info:
+    plt.plot(range(1, epochs+1),loss['loss_list'], label = 'learning_rate:{}'.format(loss['learning_rate']))
+plt.legend()
+plt.show()
+    
+    
+/opt/conda/lib/python3.7/site-packages/ipykernel_launcher.py:6: RuntimeWarning: divide by zero encountered in log
+  
+---------------------------------------------------------------------------
+KeyboardInterrupt                         Traceback (most recent call last)
+<ipython-input-16-3b68e1687844> in <module>
+      8 for eta in learning_rate:
+      9     w = np.zeros([784,1])
+---> 10     w, loss = grad_descent(w, trainData,trainTarget, eta, epochs, 0, 1e-7)
+     11     loss_info.append({'learning_rate':eta, 'loss_list': loss})
+     12 
+
+<ipython-input-15-85ad33aac9ca> in grad_descent(w, x, y, eta, iterations, reg, error_tol)
+     10             loss_list.append(crossEntropyLoss(w, x, y, reg))
+     11             return w_grad, loss
+---> 12         loss_list.append(crossEntropyLoss(w, x, y, reg))
+     13 
+     14     return w, loss_list
+
+<ipython-input-11-0a8c500c61ce> in crossEntropyLoss(w, x, y, reg)
+      3 
+      4 def crossEntropyLoss(w, x, y, reg):
+----> 5     y_hat = sigmoid(x @ w)
+      6     loss = (- y * np.log(y_hat) - (1-y)*np.log(1-y_hat)).mean() + reg/2*np.sum(w**2)
+      7     return loss
+
+<ipython-input-11-0a8c500c61ce> in sigmoid(x)
+      1 def sigmoid(x):
+----> 2     return (1.0/(1+np.exp(-x)))
+      3 
+      4 def crossEntropyLoss(w, x, y, reg):
+      5     y_hat = sigmoid(x @ w)
+
+KeyboardInterrupt: 
+In the text box below, briefly discuss the impact of the learning rate 𝜂 on the training time.
+
+Student's answerScore: 1.0 / 1.0 (Top)
+learning rate is step size parameter. if the learning rate is small,the progress is slow,but high accuracy. if the leanring rate is large, the progress is fast, but low accuracy. the typical learning rate we should choose is decrease with interations.
+
+Generalization [3 points]:
+Fix the learning rate to 𝜂=0.005, and consider values for the regularization parameter 𝜆=0.001,0.01,0.1. Measure the classification error using the validation and test sets and state them in your answer in the text box below. Comment on the effect of regularization on performance as well as the rationale behind tuning 𝜆 using the validation set.
+
+Student's answerScore: 0.0 / 0.0 (Top)
+""" Here you can write your code for the generalization test"""
+trainData, validData, testData, trainTarget, validTarget, testTarget = loadData()
+trainData = trainData.reshape(-1,784)
+validData = validData.reshape(-1,784)
+testData = testData.reshape(-1,784)
+
+reg_list = [0.001, 0.01, 0.1]
+for reg in reg_list:
+    w = np.zeros([784,1])
+    w, _ = grad_descent(w, trainData,trainTarget, 5e-3, 200, reg, 1e-7)
+
+    pred_y_valid = [[1] if i < 0.5 else [0] for i in sigmoid(validData @ w)]
+    valid_classify_error = 1 - np.sum(pred_y_valid == validTarget)/len(validTarget)
+    
+    pred_y_test = [[1] if i < 0.5 else [0] for i in sigmoid(testData @ w)]
+    test_classify_error = 1 - np.sum(pred_y_test == testTarget)/len(testTarget)
+
+    print('reg:{}, valid_classify_error:{}'.format(reg, valid_classify_error))
+    print('reg:{}, test_classify_error:{}'.format(reg, test_classify_error))
+reg:0.001, valid_classify_error:0.18000000000000005
+reg:0.001, test_classify_error:0.1103448275862069
+---------------------------------------------------------------------------
+KeyboardInterrupt                         Traceback (most recent call last)
+<ipython-input-17-812ecf2c5c11> in <module>
+      8 for reg in reg_list:
+      9     w = np.zeros([784,1])
+---> 10     w, _ = grad_descent(w, trainData,trainTarget, 5e-3, 200, reg, 1e-7)
+     11 
+     12     pred_y_valid = [[1] if i < 0.5 else [0] for i in sigmoid(validData @ w)]
+
+<ipython-input-15-85ad33aac9ca> in grad_descent(w, x, y, eta, iterations, reg, error_tol)
+     10             loss_list.append(crossEntropyLoss(w, x, y, reg))
+     11             return w_grad, loss
+---> 12         loss_list.append(crossEntropyLoss(w, x, y, reg))
+     13 
+     14     return w, loss_list
+
+<ipython-input-11-0a8c500c61ce> in crossEntropyLoss(w, x, y, reg)
+      3 
+      4 def crossEntropyLoss(w, x, y, reg):
+----> 5     y_hat = sigmoid(x @ w)
+      6     loss = (- y * np.log(y_hat) - (1-y)*np.log(1-y_hat)).mean() + reg/2*np.sum(w**2)
+      7     return loss
+
+<ipython-input-11-0a8c500c61ce> in sigmoid(x)
+      1 def sigmoid(x):
+----> 2     return (1.0/(1+np.exp(-x)))
+      3 
+      4 def crossEntropyLoss(w, x, y, reg):
+      5     y_hat = sigmoid(x @ w)
+
+KeyboardInterrupt: 
+Student's answerScore: 1.5 / 3.0 (Top)
+The regularization parameter has very small effects on the classification error of this test dataset. The classification error on the valid datasets is higher than that in the rest dataset.
+
+Comments:
+You should provide all the results. The reasoning is incomplete
